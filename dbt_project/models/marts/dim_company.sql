@@ -1,31 +1,23 @@
 {{ config(materialized='table') }}
 
-with ticker_universe as (
-    select distinct ticker
-    from {{ ref('stg_stock_prices') }}
-),
-
-enriched as (
+with snapshot_data as (
     select
-        {{ dbt_utils.generate_surrogate_key(['ticker']) }}   as company_key,
         ticker,
-        -- Simple sector classification placeholder.
-        -- In production, this would join to an enrichment source (FMP, Polygon, etc.)
-        case
-            when ticker in ('AAPL','MSFT','NVDA','GOOGL','GOOG','META','AMZN','TSLA','AVGO','ORCL','CRM','ADBE','CSCO','AMD','INTC','IBM','QCOM','TXN','NOW','INTU')
-                then 'Technology'
-            when ticker in ('JPM','BAC','WFC','C','GS','MS','AXP','BLK','SCHW','V','MA','PYPL','COF','USB','PNC')
-                then 'Financials'
-            when ticker in ('UNH','JNJ','PFE','LLY','MRK','ABBV','TMO','ABT','DHR','BMY','CVS','MDT','AMGN','GILD')
-                then 'Healthcare'
-            when ticker in ('XOM','CVX','COP','SLB','EOG','PSX','MPC','VLO','OXY','HES')
-                then 'Energy'
-            when ticker in ('WMT','HD','LOW','TGT','COST','MCD','SBUX','NKE','TJX','DG')
-                then 'Consumer'
-            else 'Other'
-        end                                                  as sector,
-        current_timestamp()                                  as dbt_loaded_at
-    from ticker_universe
+        sector,
+        dbt_valid_from   as valid_from,
+        coalesce(dbt_valid_to, '9999-12-31'::timestamp) as valid_to,
+        case when dbt_valid_to is null then true else false end as is_current,
+        dbt_scd_id       as scd_id
+    from {{ ref('dim_company_snapshot') }}
 )
 
-select * from enriched
+select
+    {{ dbt_utils.generate_surrogate_key(['ticker', 'valid_from']) }} as company_key,
+    ticker,
+    sector,
+    valid_from,
+    valid_to,
+    is_current,
+    scd_id,
+    current_timestamp() as dbt_loaded_at
+from snapshot_data
