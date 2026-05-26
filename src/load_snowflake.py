@@ -48,7 +48,11 @@ ON_ERROR = 'ABORT_STATEMENT';
 
 
 def get_snowflake_connection():
-    with open(os.getenv("SNOWFLAKE_PRIVATE_KEY_PATH"), "rb") as f:
+    key_path = os.getenv("SNOWFLAKE_PRIVATE_KEY_PATH")
+    # Strip container path prefix when running locally
+    if not os.path.exists(key_path) and key_path.startswith("/opt/airflow/"):
+        key_path = key_path.replace("/opt/airflow/", "")
+    with open(key_path, "rb") as f:
         p_key = serialization.load_pem_private_key(f.read(), password=None)
     pkb = p_key.private_bytes(
         encoding=serialization.Encoding.DER,
@@ -75,7 +79,6 @@ def copy_into_raw() -> dict:
         log.info("Running COPY INTO FINANCIAL_ETL.RAW.STOCK_PRICES")
         cur.execute(COPY_SQL)
         results = cur.fetchall()
-        # Get column names so we can read by name, not index
         col_names = [desc[0].lower() for desc in cur.description] if cur.description else []
 
         total_loaded = 0
@@ -85,7 +88,6 @@ def copy_into_raw() -> dict:
         for row in results:
             row_dict = dict(zip(col_names, row))
 
-            # When there's nothing to load, Snowflake returns a single 'status' row
             if len(row_dict) == 1 and "status" in row_dict:
                 log.info(f"  {row_dict['status']}")
                 continue
@@ -100,7 +102,6 @@ def copy_into_raw() -> dict:
             total_errors += errors_seen
             files_processed += 1
 
-        # Verify final row count
         cur.execute("SELECT COUNT(*) FROM FINANCIAL_ETL.RAW.STOCK_PRICES")
         total_in_table = cur.fetchone()[0]
 
@@ -116,6 +117,7 @@ def copy_into_raw() -> dict:
     finally:
         cur.close()
         conn.close()
+
 
 if __name__ == "__main__":
     copy_into_raw()
