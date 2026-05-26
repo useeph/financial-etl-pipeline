@@ -1,0 +1,23 @@
+version: 2
+
+sources:
+  - name: raw
+    database: FINANCIAL_ETL
+    schema: RAW
+    description: "Raw landed data from S3 via Snowflake COPY INTO"
+    tables:
+      - name: stock_prices
+        description: "S&P 500 daily OHLCV prices, one row per ticker per trading day"
+        columns:
+          - name: date
+            description: "Trading date"
+            tests:
+              - not_null
+          - name: ticker
+            description: "Stock symbol (e.g. AAPL)"
+            tests:
+              - not_null
+          - name: close
+            description: "Closing price (unadjusted)"
+            tests:
+              - not_null

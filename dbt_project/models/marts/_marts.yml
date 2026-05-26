@@ -1,0 +1,44 @@
+version: 2
+
+models:
+  - name: dim_company
+    description: "Company dimension, one row per unique ticker"
+    columns:
+      - name: company_key
+        description: "Surrogate key (hash of ticker)"
+        tests:
+          - unique
+          - not_null
+      - name: ticker
+        tests:
+          - unique
+          - not_null
+
+  - name: dim_date
+    description: "Calendar dimension, one row per date 2020-2030"
+    columns:
+      - name: date_key
+        tests:
+          - unique
+          - not_null
+
+  - name: fct_daily_prices
+    description: "Daily price fact, one row per ticker per trading day"
+    columns:
+      - name: price_key
+        tests:
+          - unique
+          - not_null
+      - name: ticker
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_company')
+                field: ticker
+      - name: price_date
+        tests:
+          - not_null
+      - name: close_price
+        tests:
+          - not_null
