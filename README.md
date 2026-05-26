@@ -50,6 +50,17 @@ Snowflake ANALYTICS layer:
 - **Surrogate keys** — All dimension/fact keys are hashed surrogates (production best practice)
 - **Cluster keys** — `fct_daily_prices` clustered by `(price_date, ticker)` for fast slice queries
 
+## Screenshots
+
+### Airflow DAG
+End-to-end pipeline orchestration with three sequential tasks:
+
+![Airflow DAG](docs/screenshots/airflow_dag.png)
+
+### Data quality tests
+All 16 dbt tests passing — uniqueness, not-null, referential integrity, and SCD2 invariants:
+
+![dbt test results](docs/screenshots/dbt_tests.png)
 ## Project structure
 
 
